@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FrozenForge.Events", "Froze
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FrozenForge.Events.Tests", "FrozenForge.Events.Tests\FrozenForge.Events.Tests.csproj", "{F6B8F700-5C46-4722-9C8D-147831F8253A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FrozenForge.Events.DependencyInjection", "FrozenForge.Events.DependencyInjection\FrozenForge.Events.DependencyInjection.csproj", "{6AE183EF-00BF-4DC8-BAC2-CA3BE593ED13}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{F6B8F700-5C46-4722-9C8D-147831F8253A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F6B8F700-5C46-4722-9C8D-147831F8253A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F6B8F700-5C46-4722-9C8D-147831F8253A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6AE183EF-00BF-4DC8-BAC2-CA3BE593ED13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AE183EF-00BF-4DC8-BAC2-CA3BE593ED13}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AE183EF-00BF-4DC8-BAC2-CA3BE593ED13}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AE183EF-00BF-4DC8-BAC2-CA3BE593ED13}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

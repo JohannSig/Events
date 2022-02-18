@@ -8,12 +8,8 @@ using System.Threading.Tasks;
 [assembly: InternalsVisibleTo("FrozenForge.Events.Tests")]
 namespace FrozenForge.Events
 {
-    public interface IEvents : IEventListener, IEventTrigger
-    {
 
-    }
-
-	public class EventsBase : IEvents
+    public class EventsBase : IEvents
     {
         internal IDictionary<Type, IEventRegistrationContainer> RegistrationContainerByType { get; set; } = new ConcurrentDictionary<Type, IEventRegistrationContainer>();
 
