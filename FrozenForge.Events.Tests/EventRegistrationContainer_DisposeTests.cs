@@ -1,43 +1,42 @@
-﻿using FrozenForge.Events;
-using Xunit;
+﻿using Xunit;
 
-namespace Sovereign.Tests
+namespace FrozenForge.Events.Tests
 {
     public class EventRegistrationContainer_DisposeTests
-	{
+    {
 
-		[Fact]
-		public void CallsConstructorOnDisposeMethod()
-		{
-			var isConstructorCallbackInvokedOnDispose = false;
+        [Fact]
+        public void CallsConstructorOnDisposeMethod()
+        {
+            var isConstructorCallbackInvokedOnDispose = false;
 
-			var container = new EventRegistrationContainer<TestEvent>();
+            var container = new EventRegistrationContainer<TestEvent>();
 
-			container.OnDisposed += x => isConstructorCallbackInvokedOnDispose = true;
+            container.OnDisposed += x => isConstructorCallbackInvokedOnDispose = true;
 
-			Assert.False(isConstructorCallbackInvokedOnDispose);
+            Assert.False(isConstructorCallbackInvokedOnDispose);
 
-			container.Dispose();
+            container.Dispose();
 
-			Assert.True(isConstructorCallbackInvokedOnDispose);
-		}
+            Assert.True(isConstructorCallbackInvokedOnDispose);
+        }
 
 
-		[Fact]
-		public void AvoidsCircularDisposal()
-		{
-			var scopedEvents = new EventsBase();
+        [Fact]
+        public void AvoidsCircularDisposal()
+        {
+            var scopedEvents = new EventsBase();
 
-			scopedEvents.Register<TestEvent>(@event => { });
-			scopedEvents.Register<TestEvent>(@event => { });
-			scopedEvents.Register<TestEvent>(@event => { });
-			scopedEvents.Register<TestEvent>(@event => { });
+            scopedEvents.Register<TestEvent>(@event => { });
+            scopedEvents.Register<TestEvent>(@event => { });
+            scopedEvents.Register<TestEvent>(@event => { });
+            scopedEvents.Register<TestEvent>(@event => { });
 
-			var container = scopedEvents.RegistrationContainerByType[typeof(TestEvent)];
+            var container = scopedEvents.RegistrationContainerByType[typeof(TestEvent)];
 
-			container.Dispose();
-		}
+            container.Dispose();
+        }
 
-		private class TestEvent { }
-	}
+        private class TestEvent { }
+    }
 }
