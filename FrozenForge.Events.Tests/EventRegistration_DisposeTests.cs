@@ -1,64 +1,63 @@
-﻿using FrozenForge.Events;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Xunit;
 
-namespace Sovereign.Tests
+namespace FrozenForge.Events.Tests
 {
     public class EventRegistration_DisposeTests
-	{
-		[Fact]
-		public void InvokesDisposeCallbackConstructorMethod()
-		{
-			bool isInvoked = false;
+    {
+        [Fact]
+        public void InvokesDisposeCallbackConstructorMethod()
+        {
+            var isInvoked = false;
 
-			var subscription = new EventRegistration<TestEvent>();
+            var subscription = new EventRegistration<TestEvent>();
 
-			subscription.OnDisposed += action => isInvoked = true;
+            subscription.OnDisposed += action => isInvoked = true;
 
-			Assert.False(isInvoked);
+            Assert.False(isInvoked);
 
-			subscription.Dispose();
+            subscription.Dispose();
 
-			Assert.True(isInvoked);
-		}
+            Assert.True(isInvoked);
+        }
 
-		[Fact]
-		public void RemovesSubscriptionFromContainer()
-		{
-			var container = new EventRegistrationContainer<TestEvent>();
+        [Fact]
+        public void RemovesSubscriptionFromContainer()
+        {
+            var container = new EventRegistrationContainer<TestEvent>();
 
-			var subscription = container.Register((@event, cancellationToken) => Task.CompletedTask);
+            var subscription = container.Register((@event, cancellationToken) => Task.CompletedTask);
 
-			Assert.Single(container.Registrations);
-			Assert.True(container.Registrations.Contains(subscription as EventRegistration<TestEvent>));
+            Assert.Single(container.Registrations);
+            Assert.True(container.Registrations.Contains(subscription as EventRegistration<TestEvent>));
 
-			subscription.Dispose();
+            subscription.Dispose();
 
-			Assert.Empty(container.Registrations);
-		}
+            Assert.Empty(container.Registrations);
+        }
 
-		[Fact]
-		public void RemovesContainerFromEventsWithLastRegistration()
-		{
-			var events = new EventsBase();
-			var registration1 = events.Register<TestEvent>(@event => { });
-			var registration2 = events.Register<TestEvent2>(@event => { });
+        [Fact]
+        public void RemovesContainerFromEventsWithLastRegistration()
+        {
+            var events = new EventsBase();
+            var registration1 = events.Register<TestEvent>(@event => { });
+            var registration2 = events.Register<TestEvent2>(@event => { });
 
-			// Two 
-			Assert.Equal(2, events.RegistrationContainerByType.Count);
+            // Two 
+            Assert.Equal(2, events.RegistrationContainerByType.Count);
 
-			registration1.Dispose();
+            registration1.Dispose();
 
-			Assert.Single(events.RegistrationContainerByType);
+            Assert.Single(events.RegistrationContainerByType);
 
-			registration2.Dispose();
+            registration2.Dispose();
 
-			Assert.Empty(events.RegistrationContainerByType);
-		}
+            Assert.Empty(events.RegistrationContainerByType);
+        }
 
-		private class TestEvent { }
+        private class TestEvent { }
 
-		private class TestEvent2 { }
+        private class TestEvent2 { }
 
-	}
+    }
 }
