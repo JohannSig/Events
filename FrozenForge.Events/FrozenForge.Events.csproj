@@ -1,18 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	  <TargetFramework>net6.0</TargetFramework>
+	  <TargetFramework>netstandard2.1</TargetFramework>
 	  <AssemblyName>FrozenForge.Events</AssemblyName>
 	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	  <RepositoryType>git</RepositoryType>
 	  <RepositoryUrl>https://github.com/JohannSig/Events</RepositoryUrl>
 	  <PackageReleaseNotes>.NET 6 version</PackageReleaseNotes>
-	  <AssemblyVersion>6.0.0</AssemblyVersion>
-	  <FileVersion>6.0.0</FileVersion>
-	  <Description>.NET 6 pub/sub event system.</Description>
+	  <AssemblyVersion>2.1.0</AssemblyVersion>
+	  <FileVersion>2.1.0</FileVersion>
+	  <Description>.NET Standard 2.1 pub/sub event system.</Description>
 	  <PackageProjectUrl>https://github.com/JohannSig/Events</PackageProjectUrl>
 	  <Title>Frozen Forge's publish/subscriber-based events framework</Title>
-	  <Version>6.0.0</Version>
+	  <Version>2.1.0</Version>
   </PropertyGroup>
 
 </Project>
