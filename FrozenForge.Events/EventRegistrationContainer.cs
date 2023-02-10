@@ -29,7 +29,6 @@ namespace FrozenForge.Events
 			return registration;
         }
 
-
         public Task TriggerAsync(TEvent @event, CancellationToken cancellationToken) => OnTrigger?.Invoke(@event, cancellationToken);
 
         public void Dispose() => Dispose(true);
