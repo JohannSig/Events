@@ -30,7 +30,7 @@ namespace FrozenForge.Events
 				RegistrationContainerByType.Add(typeof(TEvent), container);
             }
 
-			return (container as IEventRegistrationContainer<TEvent>).Register(callback);
+			return ((IEventRegistrationContainer<TEvent>)container).Register(callback);
         }
 
 		public Task TriggerAsync<TEvent>(TEvent @event) => TriggerAsync(@event, CancellationToken.None);
@@ -39,15 +39,20 @@ namespace FrozenForge.Events
         {
 			if (RegistrationContainerByType.TryGetValue(typeof(TEvent), out var container))
 			{
-                return (container as IEventRegistrationContainer<TEvent>).TriggerAsync(@event, cancellationToken);
+                return ((IEventRegistrationContainer<TEvent>)container).TriggerAsync(@event, cancellationToken);
 			}
 
 			return Task.CompletedTask;
         }
 
-        public void Dispose() => Dispose(true);
+        public void Dispose()
+        {
+            this.Dispose(true);
+			
+			GC.SuppressFinalize(this);
+        }
 
-		public void Dispose(bool isDisposing)
+        public void Dispose(bool isDisposing)
         {
 			if (!isDisposed)
             {

@@ -8,59 +8,64 @@ namespace FrozenForge.Events
 {
     internal sealed class EventRegistrationContainer<TEvent> : IEventRegistrationContainer<TEvent>
     {
-		public event Action<IEventRegistrationContainer> OnDisposed;
+        public event Action<IEventRegistrationContainer>? OnDisposed;
 
-		public event Func<TEvent, CancellationToken, Task> OnTrigger;
+        public event Func<TEvent, CancellationToken, Task>? OnTrigger;
 
-		public ICollection<IEventRegistration<TEvent>> Registrations { get; } = new List<IEventRegistration<TEvent>>();
+        public ICollection<IEventRegistration<TEvent>> Registrations { get; } = new List<IEventRegistration<TEvent>>();
 
-		private bool isDisposed;
+        private bool isDisposed;
 
-		public IEventRegistration<TEvent> Register(Func<TEvent, CancellationToken, Task> callback)
+        public IEventRegistration<TEvent> Register(Func<TEvent, CancellationToken, Task> callback)
         {
-			var registration = new EventRegistration<TEvent>();
+            var registration = new EventRegistration<TEvent>();
 
-			OnTrigger += callback;
-			registration.OnDisposed += _ => { OnTrigger -= callback; };
-			registration.OnDisposed += OnRegistrationDisposed;
+            OnTrigger += callback;
+            registration.OnDisposed += _ => { OnTrigger -= callback; };
+            registration.OnDisposed += OnRegistrationDisposed;
 
-			Registrations.Add(registration);
+            Registrations.Add(registration);
 
-			return registration;
+            return registration;
         }
 
-        public Task TriggerAsync(TEvent @event, CancellationToken cancellationToken) => OnTrigger?.Invoke(@event, cancellationToken);
+        public Task TriggerAsync(TEvent @event, CancellationToken cancellationToken)
+        {
+            return OnTrigger is null
+                ? Task.CompletedTask
+                : OnTrigger.Invoke(@event, cancellationToken);
+        }
 
         public void Dispose() => Dispose(true);
 
         public void Dispose(bool isDisposing)
-		{
-			if (!isDisposed)
-			{
-				isDisposed = true;
+        {
+            if (!isDisposed)
+            {
+                isDisposed = true;
 
-				if (isDisposing)
-				{
-					foreach (var registration in Registrations.ToArray())
-					{
-						registration?.Dispose();
-					}
+                if (isDisposing)
+                {
+                    foreach (var registration in Registrations.ToArray())
+                    {
+                        registration?.Dispose();
+                    }
 
-					OnDisposed?.Invoke(this);
-				}
-			}
-		}
+                    OnDisposed?.Invoke(this);
+                }
+            }
+        }
 
-		private void OnRegistrationDisposed(IEventRegistration registration)
-		{
-			registration.OnDisposed -= OnRegistrationDisposed;
+        private void OnRegistrationDisposed(IEventRegistration registration)
+        {
+            registration.OnDisposed -= OnRegistrationDisposed;
 
-			Registrations.Remove(registration as IEventRegistration<TEvent>);
+            Registrations.Remove((IEventRegistration<TEvent>)registration);
 
-			if (!Registrations.Any())
-			{
-				Dispose();
-			}
-		}
-	}
+            if (Registrations.Count == 0)
+            {
+                Dispose();
+            }
+        }
+    }
 }

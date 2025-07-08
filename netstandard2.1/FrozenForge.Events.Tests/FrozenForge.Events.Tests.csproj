@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Events\FrozenForge.Events\FrozenForge.Events.csproj" />
+    <ProjectReference Include="..\FrozenForge.Events\FrozenForge.Events.csproj" />
   </ItemGroup>
 
 </Project>
