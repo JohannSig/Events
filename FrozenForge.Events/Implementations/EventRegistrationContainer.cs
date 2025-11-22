@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,7 +11,7 @@ internal sealed class EventRegistrationContainer<TEvent> : IEventRegistrationCon
 
     public event Func<TEvent, CancellationToken, Task>? OnTrigger;
 
-    public ICollection<IEventRegistration<TEvent>> Registrations { get; } = new List<IEventRegistration<TEvent>>();
+    public List<IEventRegistration<TEvent>> Registrations { get; } = [];
 
     private bool isDisposed;
 
