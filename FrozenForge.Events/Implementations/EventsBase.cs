@@ -6,12 +6,12 @@ using System.Threading;
 using System.Threading.Tasks;
 
 [assembly: InternalsVisibleTo("FrozenForge.Events.Tests")]
-namespace FrozenForge.Events
-{
+namespace FrozenForge.Events.Implementations;
 
-    public class EventsBase : IEvents
-    {
-        internal IDictionary<Type, IEventRegistrationContainer> RegistrationContainerByType { get; set; } = new ConcurrentDictionary<Type, IEventRegistrationContainer>();
+
+public class EventsBase : IEvents
+{
+    internal ConcurrentDictionary<Type, IEventRegistrationContainer> RegistrationContainerByType { get; set; } = new ConcurrentDictionary<Type, IEventRegistrationContainer>();
 
 		private bool isDisposed;
 
@@ -22,56 +22,58 @@ namespace FrozenForge.Events
 			=> Register<TEvent>((@event, cancellationToken) => callback(@event));
 
 		public IDisposable Register<TEvent>(Func<TEvent, CancellationToken, Task> callback)
-        {
+    {
 			if (!RegistrationContainerByType.TryGetValue(typeof(TEvent), out var container))
 			{
 				container = new EventRegistrationContainer<TEvent>();
 				container.OnDisposed += OnRegistrationContainerDisposed;
-				RegistrationContainerByType.Add(typeof(TEvent), container);
+				if (!RegistrationContainerByType.TryAdd(typeof(TEvent), container))
+				{
+					throw new Exception("Failed to add event registration container.");
             }
+        }
 
 			return ((IEventRegistrationContainer<TEvent>)container).Register(callback);
-        }
+    }
 
 		public Task TriggerAsync<TEvent>(TEvent @event) => TriggerAsync(@event, CancellationToken.None);
 		
 		public Task TriggerAsync<TEvent>(TEvent @event, CancellationToken cancellationToken)
-        {
+    {
 			if (RegistrationContainerByType.TryGetValue(typeof(TEvent), out var container))
 			{
-                return ((IEventRegistrationContainer<TEvent>)container).TriggerAsync(@event, cancellationToken);
+            return ((IEventRegistrationContainer<TEvent>)container).TriggerAsync(@event, cancellationToken);
 			}
 
 			return Task.CompletedTask;
-        }
+    }
 
-        public void Dispose()
-        {
-            this.Dispose(true);
+    public void Dispose()
+    {
+        this.Dispose(true);
 			
 			GC.SuppressFinalize(this);
-        }
+    }
 
-        public void Dispose(bool isDisposing)
-        {
+    public void Dispose(bool isDisposing)
+    {
 			if (!isDisposed)
-            {
+        {
 				isDisposed = true;
 
 				if (isDisposing)
-                {
+            {
 					foreach (var container in RegistrationContainerByType.Values)
-                    {
+                {
 						container.OnDisposed -= OnRegistrationContainerDisposed;
 						container.Dispose();
-                    }
                 }
             }
         }
+    }
 
 		private void OnRegistrationContainerDisposed(IEventRegistrationContainer container)
 		{
 			RegistrationContainerByType.Remove(container.EventType, out _);
 		}
 	}
-}

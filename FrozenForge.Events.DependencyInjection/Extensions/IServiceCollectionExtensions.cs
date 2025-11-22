@@ -1,4 +1,5 @@
 ﻿using FrozenForge.Events;
+using FrozenForge.Events.Implementations;
 using System;
 
 namespace Microsoft.Extensions.DependencyInjection
