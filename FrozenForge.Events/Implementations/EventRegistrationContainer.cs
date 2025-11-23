@@ -39,7 +39,7 @@ internal sealed class EventRegistrationContainer<TEvent>(ILogger<EventRegistrati
         // Remove mapping when this registration is disposed.
         registration.OnDisposed += _ =>
         {
-            if (!_callbackByRegistration.TryRemove(registration, out var _))
+            if (!_callbackByRegistration.TryRemove(registration, out var _) && !isDisposed)
             {
                 this._logger.LogWarning("Failed to remove callback for disposed registration.");
             }            
@@ -81,9 +81,20 @@ internal sealed class EventRegistrationContainer<TEvent>(ILogger<EventRegistrati
 
             if (isDisposing)
             {
-                foreach (var registration in _callbackByRegistration.Keys.ToArray())
+                while (!_callbackByRegistration.IsEmpty)
                 {
-                    _callbackByRegistration.TryRemove(registration, out _);
+                    var registration = _callbackByRegistration.Keys.FirstOrDefault();
+
+                    if (registration is null)
+                    {
+                        continue;
+                    }
+
+                    if (!_callbackByRegistration.TryRemove(registration, out _))
+                    {
+                        _logger.LogWarning("Failed to remove callback for disposed registration.");
+                    }
+
                     registration?.Dispose();
                 }
 
@@ -97,7 +108,7 @@ internal sealed class EventRegistrationContainer<TEvent>(ILogger<EventRegistrati
         // Unsubscribe this handler first to avoid reentrancy.
         registration.OnDisposed -= OnRegistrationDisposed;
 
-        if (!_callbackByRegistration.TryRemove((IEventRegistration<TEvent>)registration, out _))
+        if (!_callbackByRegistration.TryRemove((IEventRegistration<TEvent>)registration, out _) && !isDisposed)
         {
             _logger.LogWarning("Failed to remove callback for disposed registration.");
         }
