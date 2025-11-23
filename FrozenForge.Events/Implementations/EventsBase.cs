@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -10,10 +9,12 @@ using Microsoft.Extensions.Logging;
 [assembly: InternalsVisibleTo("FrozenForge.Events.Tests")]
 namespace FrozenForge.Events.Implementations;
 
-public class EventsBase(ILogger<EventsBase> logger) : IEvents
+public class EventsBase(
+    ILoggerFactory loggerFactory) : IEvents
 {
-    internal ConcurrentDictionary<Type, IEventRegistrationContainer> RegistrationContainerByType { get; set; } = new ConcurrentDictionary<Type, IEventRegistrationContainer>();
-    public ILogger<EventsBase> Logger { get; } = logger;
+    private readonly ILoggerFactory _loggerFactory = loggerFactory;
+    private readonly ILogger<EventsBase> _logger = loggerFactory.CreateLogger<EventsBase>();
+    private readonly ConcurrentDictionary<Type, IEventRegistrationContainer> _registrationContainerByType = [];
 
     private bool isDisposed;
 
@@ -25,15 +26,14 @@ public class EventsBase(ILogger<EventsBase> logger) : IEvents
 
     public IDisposable Register<TEvent>(Func<TEvent, CancellationToken, Task> callback)
     {
-        if (!RegistrationContainerByType.TryGetValue(typeof(TEvent), out var container))
-        {
-            container = new EventRegistrationContainer<TEvent>();
-            container.OnDisposed += OnRegistrationContainerDisposed;
-            if (!RegistrationContainerByType.TryAdd(typeof(TEvent), container))
+        var container = _registrationContainerByType.GetOrAdd(
+            typeof(TEvent),
+            _ =>
             {
-                throw new Exception("Failed to add event registration container.");
-            }
-        }
+                var container = new EventRegistrationContainer<TEvent>(_loggerFactory.CreateLogger<EventRegistrationContainer<TEvent>>());
+                container.OnDisposed += OnRegistrationContainerDisposed;
+                return container;
+            });
 
         return ((IEventRegistrationContainer<TEvent>)container).Register(callback);
     }
@@ -42,7 +42,7 @@ public class EventsBase(ILogger<EventsBase> logger) : IEvents
 
     public Task TriggerAsync<TEvent>(TEvent @event, CancellationToken cancellationToken)
     {
-        if (RegistrationContainerByType.TryGetValue(typeof(TEvent), out var container))
+        if (_registrationContainerByType.TryGetValue(typeof(TEvent), out var container))
         {
             return ((IEventRegistrationContainer<TEvent>)container).TriggerAsync(@event, cancellationToken);
         }
@@ -59,32 +59,34 @@ public class EventsBase(ILogger<EventsBase> logger) : IEvents
 
     public void Dispose(bool isDisposing)
     {
-        if (!isDisposed)
+        if (isDisposed)
         {
-            isDisposed = true;
+            return;
+        }
 
-            if (isDisposing)
+        isDisposed = true;
+
+        if (isDisposing)
+        {
+            foreach (var containerKey in _registrationContainerByType.Keys.ToList())
             {
-                foreach (var containerKey in RegistrationContainerByType.Keys.ToList())
+                if (!_registrationContainerByType.TryRemove(containerKey, out var container))
                 {
-                    if (!RegistrationContainerByType.TryRemove(containerKey, out var container))
-                    {
-                        this.Logger.LogWarning("Failed to remove event registration container for event type {EventType} during disposal.", containerKey);
-                        continue;
-                    }
-
-                    container.OnDisposed -= OnRegistrationContainerDisposed;
-                    container.Dispose();
+                    this._logger.LogWarning("Failed to remove event registration container for event type {EventType} during disposal.", containerKey);
+                    continue;
                 }
+
+                container.OnDisposed -= OnRegistrationContainerDisposed;
+                container.Dispose();
             }
         }
     }
 
     private void OnRegistrationContainerDisposed(IEventRegistrationContainer container)
     {
-        if (!RegistrationContainerByType.TryRemove(container.EventType, out _))
+        if (!_registrationContainerByType.TryRemove(container.EventType, out _))
         {
-            this.Logger.LogWarning("Failed to remove disposed event registration container for event type {EventType}.", container.EventType);
+            this._logger.LogWarning("Failed to remove disposed event registration container for event type {EventType}.", container.EventType);
         }
     }
 }

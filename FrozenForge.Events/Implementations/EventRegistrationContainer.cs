@@ -1,38 +1,74 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FrozenForge.Events.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace FrozenForge.Events.Implementations;
 
-internal sealed class EventRegistrationContainer<TEvent> : IEventRegistrationContainer<TEvent>
+internal sealed class EventRegistrationContainer<TEvent>(ILogger<EventRegistrationContainer<TEvent>> logger) : IEventRegistrationContainer<TEvent>
 {
     public event Action<IEventRegistrationContainer>? OnDisposed;
 
-    public event Func<TEvent, CancellationToken, Task>? OnTrigger;
+    // Map each registration to its callback so we can run them concurrently.
+    private readonly ConcurrentDictionary<IEventRegistration<TEvent>, Func<TEvent, CancellationToken, Task>> _callbackByRegistration = [];
 
-    public List<IEventRegistration<TEvent>> Registrations { get; } = [];
-
+    private readonly ILogger<EventRegistrationContainer<TEvent>> _logger = logger;
+    
     private bool isDisposed;
 
     public IEventRegistration<TEvent> Register(Func<TEvent, CancellationToken, Task> callback)
     {
+        ArgumentNullException.ThrowIfNull(callback);
+
+        if (isDisposed)
+        {
+            throw new ObjectDisposedException(nameof(EventRegistrationContainer<TEvent>), "Cannot register callback on disposed container.");
+        }
+
         var registration = new EventRegistration<TEvent>();
 
-        OnTrigger += callback;
-        registration.OnDisposed += _ => { OnTrigger -= callback; };
-        registration.OnDisposed += OnRegistrationDisposed;
+        if (!_callbackByRegistration.TryAdd(registration, callback))
+        {
+            // This should never happen, but just in case.
+            throw new EventRegistrationException("Failed to add callback for new registration.");
+        }
 
-        Registrations.Add(registration);
+        // Remove mapping when this registration is disposed.
+        registration.OnDisposed += _ =>
+        {
+            if (!_callbackByRegistration.TryRemove(registration, out var _))
+            {
+                this._logger.LogWarning("Failed to remove callback for disposed registration.");
+            }            
+        };
+
+        // Keep existing centralized disposal handling.
+        registration.OnDisposed += OnRegistrationDisposed;
 
         return registration;
     }
 
     public Task TriggerAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        return OnTrigger is null
-            ? Task.CompletedTask
-            : OnTrigger.Invoke(@event, cancellationToken);
+        if (isDisposed)
+        {
+            this._logger.LogWarning("Attempted to trigger event on disposed registration container.");
+
+            return Task.CompletedTask;
+        }
+
+        var keys = _callbackByRegistration.Keys.ToHashSet();
+
+        var callbackTasks = keys
+            .Select(k => !_callbackByRegistration.TryGetValue(k, out var callback) ? null : callback)
+            .OfType<Func<TEvent, CancellationToken, Task>>()
+            .Select(callback => callback.Invoke(@event, cancellationToken))
+            .ToArray();
+
+        return Task.WhenAll(callbackTasks);
     }
 
     public void Dispose() => Dispose(true);
@@ -45,8 +81,9 @@ internal sealed class EventRegistrationContainer<TEvent> : IEventRegistrationCon
 
             if (isDisposing)
             {
-                foreach (var registration in Registrations.ToArray())
+                foreach (var registration in _callbackByRegistration.Keys.ToArray())
                 {
+                    _callbackByRegistration.TryRemove(registration, out _);
                     registration?.Dispose();
                 }
 
@@ -57,13 +94,12 @@ internal sealed class EventRegistrationContainer<TEvent> : IEventRegistrationCon
 
     private void OnRegistrationDisposed(IEventRegistration registration)
     {
+        // Unsubscribe this handler first to avoid reentrancy.
         registration.OnDisposed -= OnRegistrationDisposed;
 
-        Registrations.Remove((IEventRegistration<TEvent>)registration);
-
-        if (Registrations.Count == 0)
+        if (!_callbackByRegistration.TryRemove((IEventRegistration<TEvent>)registration, out _))
         {
-            Dispose();
+            _logger.LogWarning("Failed to remove callback for disposed registration.");
         }
     }
 }

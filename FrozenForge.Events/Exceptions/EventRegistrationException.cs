@@ -2,6 +2,6 @@
 
 namespace FrozenForge.Events.Exceptions;
 
-internal class EventRegistrationException : Exception
+internal class EventRegistrationException(string message) : Exception(message)
 {
 }
